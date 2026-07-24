@@ -16,6 +16,10 @@ Plataforma educativa interactiva construida con Next.js, React y TypeScript. El 
 - Vista previa de cada recurso, lectura por voz y descargas reales.
 - Persistencia local del avance mediante `localStorage`.
 - Diseño responsive para escritorio, tablet y móvil.
+- Inicio de sesión con sesión local de ocho horas.
+- Tres niveles de acceso: superadministrador, administrador/profesor y alumno.
+- Gestión de usuarios con búsqueda, filtros, altas, edición, activación y restablecimiento de contraseña.
+- Restricción de permisos: el administrador/profesor solo administra alumnos.
 
 ## Recursos incluidos
 
@@ -50,3 +54,20 @@ npm run start
 docker build -t mapa-vivo-agua .
 docker run --rm -p 3000:3000 mapa-vivo-agua
 ```
+
+
+## Accesos de demostración
+
+| Rol | Usuario | Contraseña |
+|---|---|---|
+| Superadministrador | `superadmin` | `Super123!` |
+| Administrador / profesor | `profesor` | `Profesor123!` |
+| Alumno | `alumno` | `Alumno123!` |
+
+También puede utilizarse el correo correspondiente: `superadmin@mapavivo.mx`, `profesor@mapavivo.mx` o `alumno@mapavivo.mx`.
+
+## Alcance de esta primera etapa
+
+La autenticación actual persiste usuarios, hashes y sesión en `localStorage` para probar la interfaz y las reglas de permisos sin depender todavía de un servidor. **No es seguridad de producción** porque el navegador puede modificar esa información.
+
+El archivo `docs/AUTH_BACKEND_PLAN.md` contiene el contrato recomendado para migrar a un backend con contraseñas BCrypt/Argon2id, access token, refresh token en cookie segura, autorización por endpoint y auditoría.

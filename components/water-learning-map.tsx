@@ -21,6 +21,7 @@ import {
   HeartPulse,
   Home,
   ImageIcon,
+  LogOut,
   Map as MapIcon,
   Maximize2,
   Menu,
@@ -33,9 +34,11 @@ import {
   Play,
   Plus,
   Search,
+  ShieldCheck,
   Sprout,
   Trash2,
   Upload,
+  UserRoundCog,
   Users,
   VenusAndMars,
   Waves,
@@ -43,9 +46,13 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { ProjectSections } from "@/components/project-sections";
+import { UserManagement } from "@/components/auth/user-management";
+import { canManageUsers, roleLabels } from "@/lib/auth";
+import type { PlatformUser, UserDraft } from "@/lib/auth";
 import { ChangeEvent, MouseEvent, useEffect, useMemo, useRef, useState } from "react";
 
-type SectionId = "inicio" | "pregunta" | "exploramos" | "acciones" | "compartimos" | "recursos";
+type ProjectSectionId = "inicio" | "pregunta" | "exploramos" | "acciones" | "compartimos" | "recursos";
+type SectionId = ProjectSectionId | "usuarios";
 type EvidenceKind = "photo" | "drawing" | "audio";
 type NodeId = "language" | "science" | "ethics" | "community";
 type ViewMode = "map" | "log";
@@ -73,7 +80,7 @@ type Evidence = {
   isUserAdded?: boolean;
 };
 
-const navigation: Array<{ id: SectionId; label: string; icon: LucideIcon }> = [
+const baseNavigation: Array<{ id: ProjectSectionId; label: string; icon: LucideIcon }> = [
   { id: "inicio", label: "Inicio", icon: Home },
   { id: "pregunta", label: "Pregunta local", icon: CircleHelp },
   { id: "exploramos", label: "Exploramos", icon: Search },
@@ -178,9 +185,27 @@ const axes: Array<{ label: string; icon: LucideIcon; color: string }> = [
   { label: "Artes y experiencias estéticas", icon: Palette, color: "#c22d74" },
 ];
 
-const sectionFlow: SectionId[] = ["inicio", "pregunta", "exploramos", "acciones", "compartimos", "recursos"];
+const sectionFlow: ProjectSectionId[] = ["inicio", "pregunta", "exploramos", "acciones", "compartimos", "recursos"];
 
-export function WaterLearningMap() {
+type WaterLearningMapProps = {
+  currentUser: PlatformUser;
+  users: PlatformUser[];
+  onLogout: () => void;
+  onCreateUser: (draft: UserDraft) => Promise<string | null>;
+  onUpdateUser: (id: string, draft: UserDraft) => Promise<string | null>;
+  onToggleUserStatus: (id: string) => string | null;
+  onResetUserPassword: (id: string, temporaryPassword: string) => Promise<string | null>;
+};
+
+export function WaterLearningMap({
+  currentUser,
+  users,
+  onLogout,
+  onCreateUser,
+  onUpdateUser,
+  onToggleUserStatus,
+  onResetUserPassword,
+}: WaterLearningMapProps) {
   const [activeSection, setActiveSection] = useState<SectionId>("inicio");
   const [viewMode, setViewMode] = useState<ViewMode>("map");
   const [selectedNode, setSelectedNode] = useState<LearningNode | null>(null);
@@ -189,6 +214,8 @@ export function WaterLearningMap() {
   const [previewEvidence, setPreviewEvidence] = useState<Evidence | null>(null);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [teamOpen, setTeamOpen] = useState(false);
+  const [sidebarAccountOpen, setSidebarAccountOpen] = useState(false);
+  const [headerAccountOpen, setHeaderAccountOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -210,6 +237,20 @@ export function WaterLearningMap() {
     () => evidence.filter((item) => item.kind === activeEvidenceKind),
     [activeEvidenceKind, evidence],
   );
+
+  const navigation = useMemo<Array<{ id: SectionId; label: string; icon: LucideIcon }>>(
+    () => canManageUsers(currentUser.role)
+      ? [...baseNavigation, { id: "usuarios", label: currentUser.role === "super_admin" ? "Usuarios" : "Mis alumnos", icon: UserRoundCog }]
+      : baseNavigation,
+    [currentUser.role],
+  );
+
+  const userInitials = currentUser.name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
 
   const toggleDesktopSidebar = () => {
     setSidebarCollapsed((collapsed) => {
@@ -251,7 +292,8 @@ export function WaterLearningMap() {
     setToast("Evidencia eliminada.");
   };
 
-  const nextSection = sectionFlow[(sectionFlow.indexOf(activeSection) + 1) % sectionFlow.length];
+  const currentFlowIndex = sectionFlow.indexOf(activeSection as ProjectSectionId);
+  const nextSection = sectionFlow[(Math.max(currentFlowIndex, -1) + 1) % sectionFlow.length];
   const nextSectionLabel = navigation.find((item) => item.id === nextSection)?.label ?? "Inicio";
 
   const advanceStep = () => {
@@ -312,14 +354,23 @@ export function WaterLearningMap() {
           </button>
         </div>
 
-        <button className="team-chip" type="button" onClick={() => setTeamOpen((open) => !open)}>
-          <span className="team-avatar">E</span>
-          <span>
-            <small>Equipo</small>
-            <strong>Agua Clara</strong>
-          </span>
-          <ChevronDown size={17} />
-        </button>
+        <div className="sidebar-account-wrap">
+          <button className="team-chip account-chip" type="button" onClick={() => setSidebarAccountOpen((open) => !open)} title={sidebarCollapsed ? currentUser.name : undefined}>
+            <span className="team-avatar">{userInitials || "U"}</span>
+            <span>
+              <small>{roleLabels[currentUser.role]}</small>
+              <strong>{currentUser.name}</strong>
+            </span>
+            <ChevronDown size={17} />
+          </button>
+          {sidebarAccountOpen && (
+            <div className="sidebar-account-popover">
+              <strong>{currentUser.name}</strong>
+              <span>{currentUser.email}</span>
+              <button type="button" onClick={onLogout}><LogOut size={16} /> Cerrar sesión</button>
+            </div>
+          )}
+        </div>
       </aside>
 
       {mobileMenuOpen && (
@@ -343,57 +394,76 @@ export function WaterLearningMap() {
           </button>
 
           <div className="project-heading">
-            <span>Proyecto comunitario</span>
-            <h1>El agua que compartimos</h1>
-            <p>Exploramos una pregunta local desde cuatro lentes conectadas.</p>
-            <Waves size={66} strokeWidth={1.5} />
+            <span>{activeSection === "usuarios" ? "Administración de la plataforma" : "Proyecto comunitario"}</span>
+            <h1>{activeSection === "usuarios" ? (currentUser.role === "super_admin" ? "Gestión de usuarios" : "Gestión de alumnos") : "El agua que compartimos"}</h1>
+            <p>{activeSection === "usuarios" ? "Controla cuentas, roles y accesos de acuerdo con tus permisos." : "Exploramos una pregunta local desde cuatro lentes conectadas."}</p>
+            {activeSection === "usuarios" ? <UserRoundCog size={58} strokeWidth={1.5} /> : <Waves size={66} strokeWidth={1.5} />}
           </div>
 
           <div className="header-actions">
-            <div className="view-switch" role="tablist" aria-label="Vista del proyecto">
-              <button
-                className={viewMode === "map" ? "is-active" : ""}
-                onClick={() => { setActiveSection("inicio"); setViewMode("map"); }}
-                role="tab"
-                type="button"
-              >
-                <MapIcon size={20} /> Mapa del proyecto
-              </button>
-              <button
-                className={viewMode === "log" ? "is-active" : ""}
-                onClick={() => { setActiveSection("inicio"); setViewMode("log"); }}
-                role="tab"
-                type="button"
-              >
-                <ClipboardList size={20} /> Bitácora del equipo
-              </button>
-            </div>
+            {activeSection !== "usuarios" && (
+              <>
+                <div className="view-switch" role="tablist" aria-label="Vista del proyecto">
+                  <button
+                    className={viewMode === "map" ? "is-active" : ""}
+                    onClick={() => { setActiveSection("inicio"); setViewMode("map"); }}
+                    role="tab"
+                    type="button"
+                  >
+                    <MapIcon size={20} /> Mapa del proyecto
+                  </button>
+                  <button
+                    className={viewMode === "log" ? "is-active" : ""}
+                    onClick={() => { setActiveSection("inicio"); setViewMode("log"); }}
+                    role="tab"
+                    type="button"
+                  >
+                    <ClipboardList size={20} /> Bitácora del equipo
+                  </button>
+                </div>
 
-            <div className="team-selector-wrap">
-              <button className="team-selector" type="button" onClick={() => setTeamOpen((open) => !open)}>
-                <Users size={20} />
-                <span>
-                  <small>Equipo</small>
-                  <strong>5</strong>
-                </span>
-                <ChevronDown size={17} />
+                <div className="team-selector-wrap">
+                  <button className="team-selector" type="button" onClick={() => setTeamOpen((open) => !open)}>
+                    <Users size={20} />
+                    <span>
+                      <small>Equipo</small>
+                      <strong>5</strong>
+                    </span>
+                    <ChevronDown size={17} />
+                  </button>
+                  {teamOpen && (
+                    <div className="team-popover">
+                      <strong>Equipo Agua Clara</strong>
+                      <span>5 integrantes</span>
+                      <div className="member-stack" aria-label="Integrantes">
+                        {["E", "L", "M", "A", "S"].map((letter) => (
+                          <span key={letter}>{letter}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            <div className="header-account-wrap">
+              <button className="header-account-button" type="button" onClick={() => setHeaderAccountOpen((open) => !open)} aria-expanded={headerAccountOpen}>
+                <span className="header-account-avatar">{userInitials || "U"}</span>
+                <span><small>{roleLabels[currentUser.role]}</small><strong>{currentUser.name}</strong></span>
+                <ChevronDown size={16} />
               </button>
-              {teamOpen && (
-                <div className="team-popover">
-                  <strong>Equipo Agua Clara</strong>
-                  <span>5 integrantes</span>
-                  <div className="member-stack" aria-label="Integrantes">
-                    {["E", "L", "M", "A", "S"].map((letter) => (
-                      <span key={letter}>{letter}</span>
-                    ))}
-                  </div>
+              {headerAccountOpen && (
+                <div className="header-account-popover">
+                  <div><span className="header-account-avatar">{userInitials || "U"}</span><p><strong>{currentUser.name}</strong><small>{currentUser.email}</small></p></div>
+                  <span className={`header-role-badge role-${currentUser.role}`}><ShieldCheck size={14} /> {roleLabels[currentUser.role]}</span>
+                  <button type="button" onClick={onLogout}><LogOut size={16} /> Cerrar sesión</button>
                 </div>
               )}
             </div>
           </div>
         </header>
 
-        <div className="workspace">
+        <div className={`workspace ${activeSection === "usuarios" ? "users-workspace" : ""}`}>
           <section className="map-column">
             {activeSection === "inicio" && (
               <>
@@ -405,32 +475,45 @@ export function WaterLearningMap() {
                 <AxesStrip />
               </>
             )}
-            <ProjectSections activeSection={activeSection} notify={setToast} />
+            {activeSection !== "usuarios" && <ProjectSections activeSection={activeSection} notify={setToast} />}
+            {activeSection === "usuarios" && canManageUsers(currentUser.role) && (
+              <UserManagement
+                currentUser={currentUser}
+                users={users}
+                notify={setToast}
+                onCreateUser={onCreateUser}
+                onUpdateUser={onUpdateUser}
+                onToggleUserStatus={onToggleUserStatus}
+                onResetUserPassword={onResetUserPassword}
+              />
+            )}
           </section>
 
-          <aside className="evidence-column">
-            <EvidencePanel
-              activeKind={activeEvidenceKind}
-              evidence={visibleEvidence}
-              fileInputRef={fileInputRef}
-              isAudioPlaying={isAudioPlaying}
-              onKindChange={setActiveEvidenceKind}
-              onPlayAudio={() => setIsAudioPlaying((playing) => !playing)}
-              onPreview={setPreviewEvidence}
-              onRemove={removeEvidence}
-              onUpload={() => fileInputRef.current?.click()}
-            />
+          {activeSection !== "usuarios" && (
+            <aside className="evidence-column">
+              <EvidencePanel
+                activeKind={activeEvidenceKind}
+                evidence={visibleEvidence}
+                fileInputRef={fileInputRef}
+                isAudioPlaying={isAudioPlaying}
+                onKindChange={setActiveEvidenceKind}
+                onPlayAudio={() => setIsAudioPlaying((playing) => !playing)}
+                onPreview={setPreviewEvidence}
+                onRemove={removeEvidence}
+                onUpload={() => fileInputRef.current?.click()}
+              />
 
-            <button className="next-step-card" type="button" onClick={advanceStep}>
-              <span>
-                <small>Siguiente paso</small>
-                <strong>{nextSectionLabel}</strong>
-              </span>
-              <span className="next-step-icon">
-                <Search size={35} />
-              </span>
-            </button>
-          </aside>
+              <button className="next-step-card" type="button" onClick={advanceStep}>
+                <span>
+                  <small>Siguiente paso</small>
+                  <strong>{nextSectionLabel}</strong>
+                </span>
+                <span className="next-step-icon">
+                  <Search size={35} />
+                </span>
+              </button>
+            </aside>
+          )}
         </div>
       </section>
 

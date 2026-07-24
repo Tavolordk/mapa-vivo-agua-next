@@ -15,9 +15,9 @@ const sans = Nunito_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "El agua que compartimos | Mapa de aprendizaje",
+  title: "Mapa vivo | Plataforma educativa",
   description:
-    "Plataforma educativa interactiva alineada con los campos formativos y ejes articuladores de la Nueva Escuela Mexicana.",
+    "Plataforma educativa con proyectos, recursos, autenticación y gestión de usuarios por roles.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
