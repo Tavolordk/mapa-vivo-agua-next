@@ -26,6 +26,11 @@ npm run start
 ## Funcionalidades incluidas
 
 - Mapa interactivo de cuatro campos formativos.
+- Sección Pregunta local con editor, enfoques, sugerencias y contexto.
+- Sección Exploramos con cuatro recorridos, progreso y ruta de campo.
+- Sección Acciones con tablero de tareas, materiales y acuerdos de seguridad.
+- Sección Compartimos con mural, publicaciones, reacciones y presentación final.
+- Sección Recursos con buscador, filtros y tarjetas de materiales.
 - Tarjetas con información y retos en modal.
 - Vista de mapa y vista de bitácora.
 - Evidencias por fotografía, dibujo y audio.
@@ -44,6 +49,7 @@ app/
   layout.tsx
   page.tsx
 components/
+  project-sections.tsx
   water-learning-map.tsx
 public/images/
   ...recursos visuales

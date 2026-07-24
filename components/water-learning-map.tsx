@@ -42,7 +42,8 @@ import {
   X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import { ProjectSections } from "@/components/project-sections";
+import { ChangeEvent, MouseEvent, useEffect, useMemo, useRef, useState } from "react";
 
 type SectionId = "inicio" | "pregunta" | "exploramos" | "acciones" | "compartimos" | "recursos";
 type EvidenceKind = "photo" | "drawing" | "audio";
@@ -177,7 +178,7 @@ const axes: Array<{ label: string; icon: LucideIcon; color: string }> = [
   { label: "Artes y experiencias estéticas", icon: Palette, color: "#c22d74" },
 ];
 
-const nextSteps = ["Investigar", "Observar", "Proponer", "Actuar", "Compartir"];
+const sectionFlow: SectionId[] = ["inicio", "pregunta", "exploramos", "acciones", "compartimos", "recursos"];
 
 export function WaterLearningMap() {
   const [activeSection, setActiveSection] = useState<SectionId>("inicio");
@@ -187,11 +188,15 @@ export function WaterLearningMap() {
   const [evidence, setEvidence] = useState<Evidence[]>(initialEvidence);
   const [previewEvidence, setPreviewEvidence] = useState<Evidence | null>(null);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
-  const [nextStepIndex, setNextStepIndex] = useState(0);
   const [teamOpen, setTeamOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setSidebarCollapsed(window.localStorage.getItem("water-map-sidebar-collapsed") === "true");
+  }, []);
 
   useEffect(() => {
     const timeout = toast ? window.setTimeout(() => setToast(null), 2600) : undefined;
@@ -206,11 +211,18 @@ export function WaterLearningMap() {
     [activeEvidenceKind, evidence],
   );
 
+  const toggleDesktopSidebar = () => {
+    setSidebarCollapsed((collapsed) => {
+      const nextValue = !collapsed;
+      window.localStorage.setItem("water-map-sidebar-collapsed", String(nextValue));
+      return nextValue;
+    });
+  };
+
   const selectSection = (section: SectionId) => {
     setActiveSection(section);
     setMobileMenuOpen(false);
-    const label = navigation.find((item) => item.id === section)?.label;
-    if (section !== "inicio") setToast(`${label}: sección preparada para integrar contenido real.`);
+    setViewMode("map");
   };
 
   const handleEvidenceUpload = (event: ChangeEvent<HTMLInputElement>) => {
@@ -239,17 +251,33 @@ export function WaterLearningMap() {
     setToast("Evidencia eliminada.");
   };
 
+  const nextSection = sectionFlow[(sectionFlow.indexOf(activeSection) + 1) % sectionFlow.length];
+  const nextSectionLabel = navigation.find((item) => item.id === nextSection)?.label ?? "Inicio";
+
   const advanceStep = () => {
-    setNextStepIndex((current) => (current + 1) % nextSteps.length);
-    setToast("Avanzaste al siguiente momento del proyecto.");
+    setActiveSection(nextSection);
+    setViewMode("map");
+    setToast(`Siguiente sección: ${nextSectionLabel}.`);
   };
 
   return (
-    <main className="learning-app">
-      <aside className={`sidebar ${mobileMenuOpen ? "sidebar-open" : ""}`}>
+    <main className={`learning-app ${sidebarCollapsed ? "sidebar-is-collapsed" : ""}`}>
+      <aside className={`sidebar ${sidebarCollapsed ? "sidebar-collapsed" : ""} ${mobileMenuOpen ? "sidebar-open" : ""}`}>
         <div className="brand-mark" aria-label="Mapa vivo del agua">
-          <Droplets size={34} strokeWidth={1.8} />
-          <Waves size={31} strokeWidth={1.6} />
+          <span className="brand-symbol" aria-hidden="true">
+            <Droplets size={34} strokeWidth={1.8} />
+            <Waves size={31} strokeWidth={1.6} />
+          </span>
+          <button
+            className="desktop-sidebar-toggle"
+            type="button"
+            onClick={toggleDesktopSidebar}
+            aria-label={sidebarCollapsed ? "Ampliar barra de navegación" : "Reducir barra de navegación"}
+            aria-expanded={!sidebarCollapsed}
+            title={sidebarCollapsed ? "Ampliar menú" : "Reducir menú"}
+          >
+            <Menu size={23} />
+          </button>
         </div>
 
         <nav className="side-navigation" aria-label="Navegación del proyecto">
@@ -262,6 +290,7 @@ export function WaterLearningMap() {
                 key={item.id}
                 onClick={() => selectSection(item.id)}
                 type="button"
+                title={sidebarCollapsed ? item.label : undefined}
               >
                 <Icon size={22} strokeWidth={1.9} />
                 <span>{item.label}</span>
@@ -324,7 +353,7 @@ export function WaterLearningMap() {
             <div className="view-switch" role="tablist" aria-label="Vista del proyecto">
               <button
                 className={viewMode === "map" ? "is-active" : ""}
-                onClick={() => setViewMode("map")}
+                onClick={() => { setActiveSection("inicio"); setViewMode("map"); }}
                 role="tab"
                 type="button"
               >
@@ -332,7 +361,7 @@ export function WaterLearningMap() {
               </button>
               <button
                 className={viewMode === "log" ? "is-active" : ""}
-                onClick={() => setViewMode("log")}
+                onClick={() => { setActiveSection("inicio"); setViewMode("log"); }}
                 role="tab"
                 type="button"
               >
@@ -366,12 +395,17 @@ export function WaterLearningMap() {
 
         <div className="workspace">
           <section className="map-column">
-            {viewMode === "map" ? (
-              <ProjectMap nodes={nodes} onNodeClick={setSelectedNode} />
-            ) : (
-              <TeamLog evidence={evidence} onPreview={setPreviewEvidence} />
+            {activeSection === "inicio" && (
+              <>
+                {viewMode === "map" ? (
+                  <ProjectMap nodes={nodes} onNodeClick={setSelectedNode} />
+                ) : (
+                  <TeamLog evidence={evidence} onPreview={setPreviewEvidence} />
+                )}
+                <AxesStrip />
+              </>
             )}
-            <AxesStrip />
+            <ProjectSections activeSection={activeSection} notify={setToast} />
           </section>
 
           <aside className="evidence-column">
@@ -390,7 +424,7 @@ export function WaterLearningMap() {
             <button className="next-step-card" type="button" onClick={advanceStep}>
               <span>
                 <small>Siguiente paso</small>
-                <strong>{nextSteps[nextStepIndex]}</strong>
+                <strong>{nextSectionLabel}</strong>
               </span>
               <span className="next-step-icon">
                 <Search size={35} />
@@ -700,7 +734,7 @@ function NodeDialog({ node, onClose }: { node: LearningNode; onClose: () => void
         role="dialog"
         aria-modal="true"
         aria-labelledby="node-dialog-title"
-        onMouseDown={(event) => event.stopPropagation()}
+        onMouseDown={(event: MouseEvent<HTMLElement>) => event.stopPropagation()}
         style={{ "--node-color": node.color, "--node-soft": node.softColor } as React.CSSProperties}
       >
         <button className="modal-close" type="button" onClick={onClose} aria-label="Cerrar">
@@ -733,7 +767,7 @@ function NodeDialog({ node, onClose }: { node: LearningNode; onClose: () => void
 function EvidencePreview({ evidence, onClose }: { evidence: Evidence; onClose: () => void }) {
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={onClose}>
-      <article className="evidence-preview-dialog" role="dialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()}>
+      <article className="evidence-preview-dialog" role="dialog" aria-modal="true" onMouseDown={(event: MouseEvent<HTMLElement>) => event.stopPropagation()}>
         <button className="modal-close" type="button" onClick={onClose} aria-label="Cerrar">
           <X size={21} />
         </button>
