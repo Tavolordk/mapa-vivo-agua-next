@@ -1,11 +1,32 @@
-# Mapa vivo: El agua que compartimos
+# Mapa Vivo del Agua
 
-Proyecto educativo interactivo construido con Next.js, React y TypeScript. La interfaz reproduce el concepto visual de un mapa de aprendizaje alineado con los cuatro campos formativos de la Nueva Escuela Mexicana y sus ejes articuladores.
+Plataforma educativa interactiva construida con Next.js, React y TypeScript. El proyecto está inspirado en los cuatro campos formativos y los ejes articuladores de la Nueva Escuela Mexicana.
 
-## Requisitos
+## Funcionalidades
 
-- Node.js 20.9 o superior
-- npm 10 o superior
+- Mapa principal con cuatro campos formativos y evidencias.
+- Navegación lateral colapsable en escritorio y menú móvil.
+- Pregunta local editable con enfoque y observaciones del territorio.
+- Cuatro recorridos de exploración con instrucciones, preguntas y avance.
+- Tablero de acciones con tareas editables, responsables, fechas y etapas.
+- Lista interactiva de materiales y acuerdo de seguridad.
+- Mural comunitario con publicaciones y reacciones.
+- Presentación final descargable en PowerPoint.
+- Biblioteca de recursos con búsqueda, categorías, colección y recientes.
+- Vista previa de cada recurso, lectura por voz y descargas reales.
+- Persistencia local del avance mediante `localStorage`.
+- Diseño responsive para escritorio, tablet y móvil.
+
+## Recursos incluidos
+
+La carpeta `public/resources` contiene materiales utilizables:
+
+- Guía de observación en PDF.
+- Tarjetas de entrevista editables en DOCX.
+- Ficha de medición con fórmulas y listas desplegables en XLSX.
+- Tutorial de grabación respetuosa en PDF.
+- Checklist de seguridad en PDF.
+- Lienzo de presentación editable en PPTX.
 
 ## Ejecutar localmente
 
@@ -23,36 +44,9 @@ npm run build
 npm run start
 ```
 
-## Funcionalidades incluidas
+## Docker
 
-- Mapa interactivo de cuatro campos formativos.
-- Sección Pregunta local con editor, enfoques, sugerencias y contexto.
-- Sección Exploramos con cuatro recorridos, progreso y ruta de campo.
-- Sección Acciones con tablero de tareas, materiales y acuerdos de seguridad.
-- Sección Compartimos con mural, publicaciones, reacciones y presentación final.
-- Sección Recursos con buscador, filtros y tarjetas de materiales.
-- Tarjetas con información y retos en modal.
-- Vista de mapa y vista de bitácora.
-- Evidencias por fotografía, dibujo y audio.
-- Carga y eliminación local de evidencias.
-- Vista ampliada de imágenes.
-- Simulación de reproducción de audio.
-- Navegación lateral y navegación móvil.
-- Diseño responsive para escritorio, tableta y teléfono.
-- Animaciones con soporte para `prefers-reduced-motion`.
-
-## Estructura principal
-
-```text
-app/
-  globals.css
-  layout.tsx
-  page.tsx
-components/
-  project-sections.tsx
-  water-learning-map.tsx
-public/images/
-  ...recursos visuales
+```bash
+docker build -t mapa-vivo-agua .
+docker run --rm -p 3000:3000 mapa-vivo-agua
 ```
-
-La aplicación utiliza datos simulados. Los puntos de integración con backend pueden conectarse posteriormente a servicios de proyectos, equipos, bitácoras, evidencias y avance.
